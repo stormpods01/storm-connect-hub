@@ -3,16 +3,23 @@ import { ShoppingCart, User, LogOut, Menu, X, LayoutDashboard } from 'lucide-rea
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/lib/supabase';
 
 export default function Navbar() {
   const { user, profile, signOut } = useAuth();
   const { totalItems } = useCart();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const isAdmin = profile?.email === 'admin@stormpods.com'; // simple check, can be enhanced with roles table
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin').then(({ data }) => {
+      setIsAdmin(!!(data && data.length > 0));
+    });
+  }, [user]);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/30">
@@ -21,7 +28,6 @@ export default function Navbar() {
           Storm<span className="text-muted-foreground">Pods</span>
         </Link>
 
-        {/* Desktop */}
         <div className="hidden md:flex items-center gap-6">
           <Link to="/products" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Produtos
@@ -55,13 +61,11 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile toggle */}
         <button className="md:hidden" onClick={() => setMenuOpen(!menuOpen)}>
           {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
-      {/* Mobile menu */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div
