@@ -1,26 +1,14 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate, Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Users, ShoppingBag, Package, BarChart3, Settings, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function AdminLayout() {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
+  const { user, loading, isAdmin, adminLoading } = useAuth();
   const location = useLocation();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
-  useEffect(() => {
-    if (loading) return;
-    if (!user) { navigate('/'); return; }
-    supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin').then(({ data }) => {
-      if (!data || data.length === 0) { navigate('/'); return; }
-      setIsAdmin(true);
-    });
-  }, [user, loading, navigate]);
-
-  if (loading || isAdmin === null) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando...</div>;
+  if (loading || adminLoading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando...</div>;
+  if (!user || !isAdmin) return <Navigate to="/" replace />;
 
   const links = [
     { to: '/admin', icon: BarChart3, label: 'Dashboard', exact: true },
