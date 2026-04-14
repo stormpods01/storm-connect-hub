@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, LogOut, Menu, X, LayoutDashboard } from 'lucide-react';
+import { ShoppingCart, LogOut, Menu, X, LayoutDashboard, ClipboardList } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,9 @@ export default function Navbar() {
           </Link>
           {user ? (
             <>
+              <Link to="/orders" className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
+                <ClipboardList className="w-4 h-4" /> Pedidos
+              </Link>
               <Link to="/cart" className="relative">
                 <ShoppingCart className="w-5 h-5" />
                 {totalItems > 0 && (
@@ -69,6 +72,9 @@ export default function Navbar() {
               <Link to="/products" onClick={() => setMenuOpen(false)} className="text-sm py-2">Produtos</Link>
               {user ? (
                 <>
+                  <Link to="/orders" onClick={() => setMenuOpen(false)} className="text-sm py-2 flex items-center gap-2">
+                    <ClipboardList className="w-4 h-4" /> Meus Pedidos
+                  </Link>
                   <Link to="/cart" onClick={() => setMenuOpen(false)} className="text-sm py-2 flex items-center gap-2">
                     <ShoppingCart className="w-4 h-4" /> Carrinho ({totalItems})
                   </Link>

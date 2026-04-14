@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { Users, ShoppingBag, Package, BarChart3, Settings, ArrowLeft } from 'lucide-react';
+import { Users, ShoppingBag, Package, BarChart3, Settings, ArrowLeft, Tag, FolderOpen, ScrollText } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function AdminLayout() {
@@ -13,8 +13,11 @@ export default function AdminLayout() {
   const links = [
     { to: '/admin', icon: BarChart3, label: 'Dashboard', exact: true },
     { to: '/admin/products', icon: Package, label: 'Produtos', exact: false },
+    { to: '/admin/categories', icon: FolderOpen, label: 'Categorias', exact: false },
     { to: '/admin/orders', icon: ShoppingBag, label: 'Pedidos', exact: false },
     { to: '/admin/users', icon: Users, label: 'Usuários', exact: false },
+    { to: '/admin/coupons', icon: Tag, label: 'Cupons', exact: false },
+    { to: '/admin/logs', icon: ScrollText, label: 'Logs', exact: false },
     { to: '/admin/settings', icon: Settings, label: 'Configurações', exact: false },
   ];
 
@@ -62,7 +65,7 @@ export default function AdminLayout() {
         </div>
       </div>
 
-      <main className="flex-1 lg:ml-60 p-6 lg:p-8">
+      <main className="flex-1 lg:ml-60 p-6 lg:p-8 mt-12 lg:mt-0">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <Outlet />
         </motion.div>
