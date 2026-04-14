@@ -30,11 +30,16 @@ export default function AdminOrders() {
   const [search, setSearch] = useState('');
 
   const load = async () => {
-    const { data } = await supabase
-      .from('orders')
-      .select('*, profile:profiles(full_name, email, phone)')
-      .order('created_at', { ascending: false });
-    setOrders((data || []) as OrderWithProfile[]);
+    const [{ data: ordersData }, { data: profiles }] = await Promise.all([
+      supabase.from('orders').select('*').order('created_at', { ascending: false }),
+      supabase.from('profiles').select('id, full_name, email, phone'),
+    ]);
+    const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+    const enriched = (ordersData || []).map(o => ({
+      ...o,
+      profile: profileMap.get(o.user_id) || null,
+    }));
+    setOrders(enriched as OrderWithProfile[]);
     setLoading(false);
   };
 

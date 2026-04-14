@@ -68,7 +68,7 @@ export default function AdminDashboard() {
         activeProducts: activeProducts || 0,
         activeCoupons: activeCoupons || 0,
       });
-      setRecentOrders((recent || []) as RecentOrder[]);
+      setRecentOrders(recentWithNames as RecentOrder[]);
       setOrdersByStatus(statusCount);
       setLoading(false);
     };
