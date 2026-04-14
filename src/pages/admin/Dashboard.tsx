@@ -37,7 +37,8 @@ export default function AdminDashboard() {
         { count: activeProducts },
         { count: activeCoupons },
         { data: allOrders },
-        { data: recent },
+        { data: recentRaw },
+        { data: profiles },
       ] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('orders').select('*', { count: 'exact', head: true }),
@@ -45,12 +46,19 @@ export default function AdminDashboard() {
         supabase.from('products').select('*', { count: 'exact', head: true }).eq('active', true),
         supabase.from('coupons').select('*', { count: 'exact', head: true }).eq('active', true),
         supabase.from('orders').select('total, status'),
-        supabase.from('orders').select('id, status, total, created_at, profile:profiles(full_name)').order('created_at', { ascending: false }).limit(8),
+        supabase.from('orders').select('id, status, total, created_at, user_id').order('created_at', { ascending: false }).limit(8),
+        supabase.from('profiles').select('id, full_name'),
       ]);
 
+      const profileMap = new Map((profiles || []).map(p => [p.id, p.full_name]));
       const revenue = (allOrders || []).reduce((s, o: any) => s + (o.total || 0), 0);
       const statusCount: Record<string, number> = {};
       (allOrders || []).forEach((o: any) => { statusCount[o.status] = (statusCount[o.status] || 0) + 1; });
+
+      const recentWithNames = (recentRaw || []).map((o: any) => ({
+        ...o,
+        profile: { full_name: profileMap.get(o.user_id) || 'Cliente' },
+      }));
 
       setStats({
         users: users || 0,
