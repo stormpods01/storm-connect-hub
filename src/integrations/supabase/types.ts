@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cart_items: {
         Row: {
           created_at: string
@@ -46,35 +76,118 @@ export type Database = {
           },
         ]
       }
+      categories: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coupons: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          max_uses: number | null
+          min_order_value: number | null
+          type: string
+          updated_at: string
+          used_count: number
+          value: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          max_uses?: number | null
+          min_order_value?: number | null
+          type?: string
+          updated_at?: string
+          used_count?: number
+          value?: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          max_uses?: number | null
+          min_order_value?: number | null
+          type?: string
+          updated_at?: string
+          used_count?: number
+          value?: number
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
+          coupon_code: string | null
           created_at: string
+          discount: number
           id: string
           items: Json
           status: string
           total: number
+          updated_at: string
           user_id: string
         }
         Insert: {
+          coupon_code?: string | null
           created_at?: string
+          discount?: number
           id?: string
           items?: Json
           status?: string
           total?: number
+          updated_at?: string
           user_id: string
         }
         Update: {
+          coupon_code?: string | null
           created_at?: string
+          discount?: number
           id?: string
           items?: Json
           status?: string
           total?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
       }
       products: {
         Row: {
+          active: boolean
+          category_id: string | null
           created_at: string
           description: string | null
           id: string
@@ -85,6 +198,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          active?: boolean
+          category_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -95,6 +210,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          active?: boolean
+          category_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -104,7 +221,15 @@ export type Database = {
           stock?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

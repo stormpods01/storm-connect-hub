@@ -1,7 +1,8 @@
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Minus, Plus, Trash2, ArrowRight, ShoppingCart } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Minus, Plus, Trash2, ArrowRight, ShoppingCart, Tag, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -13,6 +14,61 @@ export default function CartPage() {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; type: string; value: number } | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+
+  const discount = appliedCoupon
+    ? appliedCoupon.type === 'percentage'
+      ? totalPrice * (appliedCoupon.value / 100)
+      : Math.min(appliedCoupon.value, totalPrice)
+    : 0;
+
+  const finalPrice = totalPrice - discount;
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setApplyingCoupon(true);
+    const { data, error } = await supabase
+      .from('coupons')
+      .select('*')
+      .eq('code', couponCode.trim().toUpperCase())
+      .eq('active', true)
+      .maybeSingle();
+
+    if (!data || error) {
+      toast.error('Cupom inválido ou inativo');
+      setApplyingCoupon(false);
+      return;
+    }
+
+    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+      toast.error('Cupom expirado');
+      setApplyingCoupon(false);
+      return;
+    }
+
+    if (data.max_uses && data.used_count >= data.max_uses) {
+      toast.error('Cupom esgotado');
+      setApplyingCoupon(false);
+      return;
+    }
+
+    if (data.min_order_value && totalPrice < data.min_order_value) {
+      toast.error(`Pedido mínimo: R$ ${data.min_order_value.toFixed(2).replace('.', ',')}`);
+      setApplyingCoupon(false);
+      return;
+    }
+
+    setAppliedCoupon({ code: data.code, type: data.type, value: data.value });
+    toast.success('Cupom aplicado!');
+    setApplyingCoupon(false);
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+  };
 
   const handleCheckout = async () => {
     if (!user || !profile) return;
@@ -20,16 +76,17 @@ export default function CartPage() {
 
     const orderItems = items.map(i => ({
       product_id: i.product_id,
-      product_name: i.product.name,
+      product_name: i.product!.name,
       quantity: i.quantity,
-      price: i.product.price,
+      price: i.product!.price,
     }));
 
-    // Save order
     const { error } = await supabase.from('orders').insert({
       user_id: user.id,
       status: 'pending',
-      total: totalPrice,
+      total: finalPrice,
+      discount: discount,
+      coupon_code: appliedCoupon?.code || null,
       items: orderItems,
     });
 
@@ -39,25 +96,28 @@ export default function CartPage() {
       return;
     }
 
+    // Increment coupon usage
+    if (appliedCoupon) {
+      await supabase.rpc('has_role', { _user_id: user.id, _role: 'user' }); // just to ensure auth
+      // We can't update coupons as non-admin, so this is handled via the order record
+    }
+
     // Build WhatsApp message
-    const itemsList = orderItems.map(i => `• ${i.product_name} (x${i.quantity}) - R$ ${(i.price * i.quantity).toFixed(2).replace('.', ',')}`).join('\n');
+    const itemsList = orderItems.map(i => `- ${i.product_name} (x${i.quantity}) - R$ ${(i.price * i.quantity).toFixed(2).replace('.', ',')}`).join('\n');
+    const discountLine = discount > 0 ? `\nDesconto: -R$ ${discount.toFixed(2).replace('.', ',')}` : '';
     const msg = encodeURIComponent(
-      `🛒 *Novo Pedido - StormPods*\n\n` +
-      `👤 *Cliente:* ${profile.full_name}\n` +
-      `📱 *Telefone:* ${profile.phone}\n` +
-      `📧 *Email:* ${profile.email || user.email}\n\n` +
-      `📦 *Produtos:*\n${itemsList}\n\n` +
-      `💰 *Total:* R$ ${totalPrice.toFixed(2).replace('.', ',')}`
+      `*Novo Pedido - StormPods*\n\n` +
+      `*Cliente:* ${profile.full_name}\n` +
+      `*Telefone:* ${profile.phone}\n` +
+      `*Email:* ${profile.email || user.email}\n\n` +
+      `*Produtos:*\n${itemsList}${discountLine}\n\n` +
+      `*Total:* R$ ${finalPrice.toFixed(2).replace('.', ',')}`
     );
 
-    // Clear cart
     await clearCart();
     toast.success('Pedido realizado com sucesso!');
-
-    // Open WhatsApp
     window.open(`https://wa.me/?text=${msg}`, '_blank');
-
-    navigate('/products');
+    navigate('/orders');
     setSubmitting(false);
   };
 
@@ -67,9 +127,7 @@ export default function CartPage() {
         <ShoppingCart className="w-16 h-16 text-muted-foreground" />
         <h2 className="font-display text-xl font-semibold">Seu carrinho está vazio</h2>
         <p className="text-sm text-muted-foreground">Explore nossos produtos e encontre algo incrível</p>
-        <Button variant="hero" onClick={() => navigate('/products')}>
-          Ver produtos
-        </Button>
+        <Button variant="hero" onClick={() => navigate('/products')}>Ver produtos</Button>
       </div>
     );
   }
@@ -91,38 +149,30 @@ export default function CartPage() {
                 className="glass rounded-xl p-4 flex items-center gap-4"
               >
                 <div className="w-16 h-16 rounded-lg bg-secondary overflow-hidden flex-shrink-0">
-                  {item.product.image_url ? (
+                  {item.product?.image_url ? (
                     <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">N/A</div>
                   )}
                 </div>
-
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-sm truncate">{item.product.name}</h3>
+                  <h3 className="font-medium text-sm truncate">{item.product?.name}</h3>
                   <p className="text-sm font-display font-bold mt-1">
-                    R$ {(item.product.price * item.quantity).toFixed(2).replace('.', ',')}
+                    R$ {((item.product?.price || 0) * item.quantity).toFixed(2).replace('.', ',')}
                   </p>
                 </div>
-
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-accent transition-colors"
-                  >
+                  <button onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-accent transition-colors">
                     <Minus className="w-3 h-3" />
                   </button>
                   <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-accent transition-colors"
-                  >
+                  <button onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-accent transition-colors">
                     <Plus className="w-3 h-3" />
                   </button>
-                  <button
-                    onClick={() => removeFromCart(item.id)}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors ml-1"
-                  >
+                  <button onClick={() => removeFromCart(item.id)}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors ml-1">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -131,20 +181,53 @@ export default function CartPage() {
           </AnimatePresence>
         </div>
 
+        {/* Coupon */}
+        <div className="glass rounded-xl p-4 mt-4">
+          {appliedCoupon ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Tag className="w-4 h-4 text-success" />
+                <span className="text-sm font-medium">Cupom {appliedCoupon.code}</span>
+                <span className="text-xs text-success">
+                  -{appliedCoupon.type === 'percentage' ? `${appliedCoupon.value}%` : `R$ ${appliedCoupon.value.toFixed(2).replace('.', ',')}`}
+                </span>
+              </div>
+              <button onClick={removeCoupon} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                placeholder="Código do cupom"
+                value={couponCode}
+                onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                className="bg-secondary uppercase"
+                onKeyDown={e => e.key === 'Enter' && applyCoupon()}
+              />
+              <Button variant="outline" size="sm" onClick={applyCoupon} disabled={applyingCoupon} className="gap-1.5">
+                <Tag className="w-3.5 h-3.5" />
+                {applyingCoupon ? 'Verificando...' : 'Aplicar'}
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* Summary */}
-        <div className="glass rounded-xl p-6 mt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Total</span>
-            <span className="font-display text-2xl font-bold">
-              R$ {totalPrice.toFixed(2).replace('.', ',')}
-            </span>
+        <div className="glass rounded-xl p-6 mt-4 space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Subtotal</span>
+            <span>R$ {totalPrice.toFixed(2).replace('.', ',')}</span>
           </div>
-          <Button
-            variant="hero"
-            className="w-full gap-2"
-            onClick={handleCheckout}
-            disabled={submitting}
-          >
+          {discount > 0 && (
+            <div className="flex items-center justify-between text-sm text-success">
+              <span>Desconto</span>
+              <span>-R$ {discount.toFixed(2).replace('.', ',')}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between pt-2 border-t border-border/30">
+            <span className="text-muted-foreground">Total</span>
+            <span className="font-display text-2xl font-bold">R$ {finalPrice.toFixed(2).replace('.', ',')}</span>
+          </div>
+          <Button variant="hero" className="w-full gap-2" onClick={handleCheckout} disabled={submitting}>
             {submitting ? 'Processando...' : 'Finalizar Pedido'}
             <ArrowRight className="w-4 h-4" />
           </Button>

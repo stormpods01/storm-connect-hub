@@ -32,6 +32,11 @@ export default function ProductCard({ product }: Props) {
             Sem imagem
           </div>
         )}
+        {product.category && (
+          <span className="absolute top-3 right-3 bg-secondary/80 backdrop-blur-sm text-[10px] font-medium uppercase tracking-wider px-2 py-1 rounded-md">
+            {product.category.name}
+          </span>
+        )}
         {lowStock && (
           <span className="absolute top-3 left-3 bg-destructive text-destructive-foreground text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md">
             Últimas unidades
