@@ -102,21 +102,60 @@ export default function CartPage() {
       // We can't update coupons as non-admin, so this is handled via the order record
     }
 
-    // Build WhatsApp message
-    const itemsList = orderItems.map(i => `- ${i.product_name} (x${i.quantity}) - R$ ${(i.price * i.quantity).toFixed(2).replace('.', ',')}`).join('\n');
-    const discountLine = discount > 0 ? `\nDesconto: -R$ ${discount.toFixed(2).replace('.', ',')}` : '';
+// Build WhatsApp message with complete order details
+    const orderDate = new Date();
+    const formattedDate = orderDate.toLocaleDateString('pt-PT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+    const formattedTime = orderDate.toLocaleTimeString('pt-PT', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const itemsList = orderItems.map(i => 
+      `   ${i.quantity}x ${i.product_name}\n      Unidade: ${i.price.toFixed(2).replace('.', ',')}R$\n      Subtotal: ${(i.price * i.quantity).toFixed(2).replace('.', ',')}R$`
+    ).join('\n\n');
+
+    const totalItems = orderItems.reduce((acc, i) => acc + i.quantity, 0);
+    
+    const couponLine = appliedCoupon 
+      ? `\n*Cupom aplicado:* ${appliedCoupon.code} (${appliedCoupon.type === 'percentage' ? `-${appliedCoupon.value}%` : `-${appliedCoupon.value.toFixed(2).replace('.', ',')}R$`})`
+      : '';
+    
+    const discountLine = discount > 0 
+      ? `\n*Desconto:* -${discount.toFixed(2).replace('.', ',')}R$` 
+      : '';
+
     const msg = encodeURIComponent(
-      `*Novo Pedido - StormPods*\n\n` +
-      `*Cliente:* ${profile.full_name}\n` +
-      `*Telefone:* ${profile.phone}\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `      *NOVO PEDIDO - STORMPODS*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `*Data:* ${formattedDate} às ${formattedTime}\n\n` +
+      `*DADOS DO CLIENTE*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `*Nome:* ${profile.full_name}\n` +
+      `*Telefone:* ${profile.phone || 'Não informado'}\n` +
       `*Email:* ${profile.email || user.email}\n\n` +
-      `*Produtos:*\n${itemsList}${discountLine}\n\n` +
-      `*Total:* R$ ${finalPrice.toFixed(2).replace('.', ',')}`
+      `*PRODUTOS (${totalItems} ${totalItems === 1 ? 'item' : 'itens'})*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `${itemsList}\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `*RESUMO DO PEDIDO*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `*Subtotal:* ${totalPrice.toFixed(2).replace('.', ',')}R$` +
+      `${couponLine}` +
+      `${discountLine}\n\n` +
+      `*TOTAL A PAGAR:* ${finalPrice.toFixed(2).replace('.', ',')}R$\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `Obrigado pela preferência!\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━`
     );
 
     await clearCart();
     toast.success('Pedido realizado com sucesso!');
-    window.open(`https://wa.me/?text=${msg}`, '_blank');
+    window.open(`https://wa.me/351926026900?text=${msg}`, '_blank');
     navigate('/orders');
     setSubmitting(false);
   };
