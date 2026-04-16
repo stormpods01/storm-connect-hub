@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/types';
 import type { OrderStatus } from '@/types';
 import { ShoppingBag, Package, Clock, ChevronDown, ChevronUp, RotateCcw, MapPin } from 'lucide-react';
