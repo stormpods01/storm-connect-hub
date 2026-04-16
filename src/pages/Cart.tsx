@@ -212,10 +212,10 @@ export default function CartPage() {
         `━━━━━━━━━━━━━━━━━━━━━━\n` +
         `*RESUMO DO PEDIDO*\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `*Subtotal:* ${totalPrice.toFixed(2).replace('.', ',')}€` +
+        `*Subtotal:* ${totalPrice.toFixed(2).replace('.', ',')}R$` +
         `${couponLine}` +
         `${discountLine}\n\n` +
-        `*TOTAL A PAGAR:* ${finalPrice.toFixed(2).replace('.', ',')}€\n\n` +
+        `*TOTAL A PAGAR:* ${finalPrice.toFixed(2).replace('.', ',')}R$\n\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n` +
         `Obrigado pela preferência!\n` +
         `━━━━━━━━━━━━━━━━━━━━━━`
